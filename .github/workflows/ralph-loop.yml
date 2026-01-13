@@ -53,7 +53,7 @@ jobs:
           fi
 
       - name: Execute story verification
-        if: steps.check_stories.outputs.pending_count > 0
+        if: steps.check_stories.outputs.pending_count > '0'
         id: verify
         continue-on-error: true
         run: |
@@ -72,7 +72,7 @@ jobs:
           fi
 
       - name: Attempt LLM heal on failure
-        if: steps.verify.outcome == 'failure' && steps.check_stories.outputs.pending_count > 0
+        if: steps.verify.outcome == 'failure' && steps.check_stories.outputs.pending_count > '0'
         id: heal
         continue-on-error: true
         env:
@@ -121,7 +121,7 @@ Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
           fi
 
       - name: Update PRD on success
-        if: (steps.verify.outcome == 'success' || steps.retry.outcome == 'success') && steps.check_stories.outputs.pending_count > 0
+        if: (steps.verify.outcome == 'success' || steps.retry.outcome == 'success') && steps.check_stories.outputs.pending_count > '0'
         env:
           GH_TOKEN: ${{ secrets.GHT }}
         run: |
@@ -152,7 +152,7 @@ Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
           git push origin ${{ github.ref_name }} || echo "Push failed or no changes"
 
       - name: Check if all stories complete
-        if: steps.check_stories.outputs.pending_count > 0
+        if: steps.check_stories.outputs.pending_count > '0'
         run: |
           PENDING=$(jq '[.stories[] | select(.status == "pending")] | length' scripts/ralph/prd.json)
           if [ "$PENDING" -eq 0 ]; then
