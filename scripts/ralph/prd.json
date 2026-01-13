@@ -1,0 +1,180 @@
+{
+  "name": "ralph-fleet",
+  "version": "0.1.0",
+  "north_star": "One repo orchestrates Ralph Loops across entire GitHub account. Install Ralph on any repo with one command.",
+  "goal": "Build the fleet orchestrator MVP: scan, install, status, sync",
+  "stories": [
+    {
+      "id": "001",
+      "title": "GitHub API scaffold",
+      "status": "pending",
+      "priority": "P0",
+      "description": "Set up authenticated GitHub API client with rate limiting",
+      "acceptance_criteria": [
+        "Octokit client initialized from GITHUB_TOKEN env",
+        "Rate limit helper prevents 429s",
+        "Can list repos for authenticated user"
+      ],
+      "dependencies": [],
+      "files_to_modify": ["src/github.ts", "src/index.ts"],
+      "test_file": "test/github.test.ts",
+      "verification": "bun test && bun tsc"
+    },
+    {
+      "id": "002",
+      "title": "Scan command - list repos",
+      "status": "pending",
+      "priority": "P0",
+      "description": "CLI command to scan and list repos with filters (updated in last N days, public/private, org)",
+      "acceptance_criteria": [
+        "bun run scan lists repos",
+        "Filters: --days=30, --org=name, --public-only",
+        "Output: repo name, last updated, has Ralph (y/n)"
+      ],
+      "dependencies": ["001"],
+      "files_to_modify": ["src/commands/scan.ts", "src/cli.ts"],
+      "test_file": "test/scan.test.ts",
+      "verification": "bun test && bun run scan --help"
+    },
+    {
+      "id": "003",
+      "title": "Ralph detection - check if installed",
+      "status": "pending",
+      "priority": "P0",
+      "description": "Detect if a repo has Ralph infrastructure (AGENTS.md, prd.json, progress.txt)",
+      "acceptance_criteria": [
+        "Check for AGENTS.md at root",
+        "Check for scripts/ralph/prd.json",
+        "Return status: none | partial | complete"
+      ],
+      "dependencies": ["001"],
+      "files_to_modify": ["src/detect.ts"],
+      "test_file": "test/detect.test.ts",
+      "verification": "bun test"
+    },
+    {
+      "id": "004",
+      "title": "Status command - fleet overview",
+      "status": "pending",
+      "priority": "P1",
+      "description": "Show Ralph status across all repos in fleet",
+      "acceptance_criteria": [
+        "bun run status shows table of repos",
+        "Columns: repo, ralph status, last commit, open stories",
+        "Summary: X/Y repos have Ralph installed"
+      ],
+      "dependencies": ["002", "003"],
+      "files_to_modify": ["src/commands/status.ts"],
+      "test_file": "test/status.test.ts",
+      "verification": "bun test && bun run status --help"
+    },
+    {
+      "id": "005",
+      "title": "Templates - Ralph infrastructure files",
+      "status": "pending",
+      "priority": "P0",
+      "description": "Create template files that get installed on target repos",
+      "acceptance_criteria": [
+        "templates/AGENTS.md - generic starter",
+        "templates/prd.json - empty initialized structure",
+        "templates/progress.txt - empty with header",
+        "Templates use {{variables}} for customization"
+      ],
+      "dependencies": [],
+      "files_to_modify": ["templates/AGENTS.md", "templates/prd.json", "templates/progress.txt"],
+      "test_file": "test/templates.test.ts",
+      "verification": "bun test"
+    },
+    {
+      "id": "006",
+      "title": "Install command - add Ralph to repo",
+      "status": "pending",
+      "priority": "P0",
+      "description": "Install Ralph infrastructure on a target repo via GitHub API",
+      "acceptance_criteria": [
+        "bun run install <owner/repo> creates files",
+        "Creates branch: ralph/init",
+        "Opens PR with Ralph infrastructure",
+        "--dry-run shows what would be created",
+        "--force overwrites existing files"
+      ],
+      "dependencies": ["003", "005"],
+      "files_to_modify": ["src/commands/install.ts"],
+      "test_file": "test/install.test.ts",
+      "verification": "bun test && bun run install --help"
+    },
+    {
+      "id": "007",
+      "title": "Sync command - update fleet configs",
+      "status": "pending",
+      "priority": "P1",
+      "description": "Push config updates to all Ralph-enabled repos",
+      "acceptance_criteria": [
+        "bun run sync pushes template changes",
+        "Only updates repos with Ralph installed",
+        "Creates PRs, doesn't force-push to main",
+        "--dry-run shows affected repos"
+      ],
+      "dependencies": ["004", "006"],
+      "files_to_modify": ["src/commands/sync.ts"],
+      "test_file": "test/sync.test.ts",
+      "verification": "bun test && bun run sync --help"
+    },
+    {
+      "id": "008",
+      "title": "Batch install - Ralph across fleet",
+      "status": "pending",
+      "priority": "P1",
+      "description": "Install Ralph on multiple repos matching filter criteria",
+      "acceptance_criteria": [
+        "bun run install --all installs on all matching repos",
+        "Respects --days, --org, --public-only filters",
+        "Rate limiting between repos",
+        "Progress output: X/Y repos processed"
+      ],
+      "dependencies": ["006"],
+      "files_to_modify": ["src/commands/install.ts"],
+      "test_file": "test/batch-install.test.ts",
+      "verification": "bun test"
+    },
+    {
+      "id": "009",
+      "title": "GitHub Action workflow template",
+      "status": "pending",
+      "priority": "P2",
+      "description": "Optional CI workflow that runs Ralph loops on push",
+      "acceptance_criteria": [
+        "templates/workflows/ralph.yml created",
+        "Triggers on push to main",
+        "Runs verification commands from AGENTS.md",
+        "Optional: continues Ralph loop if stories remain"
+      ],
+      "dependencies": ["005"],
+      "files_to_modify": ["templates/workflows/ralph.yml"],
+      "test_file": "test/workflow.test.ts",
+      "verification": "bun test"
+    },
+    {
+      "id": "010",
+      "title": "Fleet report - markdown summary",
+      "status": "pending",
+      "priority": "P2",
+      "description": "Generate markdown report of fleet status for README or publishing",
+      "acceptance_criteria": [
+        "bun run report generates FLEET_STATUS.md",
+        "Shows all repos, Ralph status, health metrics",
+        "Can be committed to this repo as dashboard"
+      ],
+      "dependencies": ["004"],
+      "files_to_modify": ["src/commands/report.ts"],
+      "test_file": "test/report.test.ts",
+      "verification": "bun test && bun run report --help"
+    }
+  ],
+  "rules": {
+    "dry_run_first": "All destructive operations must pass --dry-run before real execution",
+    "rate_limiting": "Sleep 1s between GitHub API calls to repos",
+    "no_force_push": "Never push directly to main on target repos, always PR",
+    "idempotent": "Running install twice should be safe (detect existing, skip or update)"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "ralph-fleet",
+  "version": "0.1.0",
+  "description": "A Ralph Loop that installs Ralph Loops. Fleet orchestrator for GitHub repos.",
+  "type": "module",
+  "scripts": {
+    "scan": "bun run src/cli.ts scan",
+    "status": "bun run src/cli.ts status",
+    "install": "bun run src/cli.ts install",
+    "sync": "bun run src/cli.ts sync",
+    "report": "bun run src/cli.ts report",
+    "test": "bun test",
+    "tsc": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "ralph-loop",
+    "ai-agents",
+    "automation",
+    "github",
+    "orchestration"
+  ],
+  "license": "MIT"
+}

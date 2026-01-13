@@ -1,0 +1,10 @@
+# Ralph Fleet - Progress Log
+
+## Codebase Patterns
+- (Add patterns discovered during implementation)
+
+---
+
+## Log
+
+(Append after each completed story)

@@ -1,0 +1,27 @@
+{
+  "name": "{{repo_name}}",
+  "version": "0.1.0",
+  "north_star": "Define your goal here",
+  "goal": "Current milestone",
+  "stories": [
+    {
+      "id": "001",
+      "title": "First story",
+      "status": "pending",
+      "priority": "P0",
+      "description": "What needs to be done",
+      "acceptance_criteria": [
+        "Criteria 1",
+        "Criteria 2"
+      ],
+      "dependencies": [],
+      "files_to_modify": [],
+      "test_file": "",
+      "verification": "npm test && npm run tsc"
+    }
+  ],
+  "rules": {
+    "tests_first": "Write tests before implementing",
+    "verify_before_commit": "All checks must pass before committing"
+  }
+}

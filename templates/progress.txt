@@ -1,0 +1,13 @@
+# {{repo_name}} - Ralph Progress Log
+
+## Codebase Patterns
+- (Add patterns discovered during implementation)
+
+---
+
+## Log
+
+(Append after each completed story)
+
+---
+*Initialized by ralph-fleet on {{date}}*
