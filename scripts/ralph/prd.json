@@ -5,6 +5,22 @@
   "goal": "Build the fleet orchestrator MVP: scan, install, status, sync",
   "stories": [
     {
+      "id": "000",
+      "title": "Smoke test - Ralph Loop e2e",
+      "status": "pending",
+      "priority": "P0",
+      "description": "Verify Ralph Loop workflow: fail → heal → succeed → mark complete",
+      "acceptance_criteria": [
+        "File scripts/smoke-test.sh exists",
+        "Script exits with code 0",
+        "Output contains 'SMOKE TEST PASSED'"
+      ],
+      "dependencies": [],
+      "files_to_modify": ["scripts/smoke-test.sh"],
+      "test_file": "",
+      "verification": "bash scripts/smoke-test.sh"
+    },
+    {
       "id": "001",
       "title": "GitHub API scaffold",
       "status": "pending",

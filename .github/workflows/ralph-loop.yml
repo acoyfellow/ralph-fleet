@@ -1,0 +1,168 @@
+name: Ralph Loop
+
+on:
+  push:
+    branches: [main, copilot/**]
+    paths:
+      - 'scripts/ralph/prd.json'
+      - '.github/workflows/ralph-loop.yml'
+  workflow_dispatch:
+
+jobs:
+  ralph-iteration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GHT }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          if [ -f "package.json" ]; then
+            bun install
+          fi
+
+      - name: Check for pending stories
+        id: check_stories
+        run: |
+          if [ -f "scripts/ralph/prd.json" ]; then
+            PENDING=$(jq '[.stories[] | select(.status == "pending")] | length' scripts/ralph/prd.json)
+            echo "pending_count=$PENDING" >> $GITHUB_OUTPUT
+            echo "Found $PENDING pending stories"
+            
+            if [ "$PENDING" -gt 0 ]; then
+              # Get first pending story
+              STORY_ID=$(jq -r '[.stories[] | select(.status == "pending")] | .[0].id' scripts/ralph/prd.json)
+              STORY_TITLE=$(jq -r '[.stories[] | select(.status == "pending")] | .[0].title' scripts/ralph/prd.json)
+              echo "story_id=$STORY_ID" >> $GITHUB_OUTPUT
+              echo "story_title=$STORY_TITLE" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "pending_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute story verification
+        if: steps.check_stories.outputs.pending_count > 0
+        id: verify
+        continue-on-error: true
+        run: |
+          STORY_ID="${{ steps.check_stories.outputs.story_id }}"
+          echo "Executing verification for story $STORY_ID"
+          
+          # Get verification command from story
+          VERIFY_CMD=$(jq -r ".stories[] | select(.id == \"$STORY_ID\") | .verification" scripts/ralph/prd.json)
+          
+          if [ "$VERIFY_CMD" != "null" ] && [ -n "$VERIFY_CMD" ]; then
+            echo "Running: $VERIFY_CMD"
+            eval $VERIFY_CMD
+          else
+            echo "No verification command found, considering success"
+            exit 0
+          fi
+
+      - name: Attempt LLM heal on failure
+        if: steps.verify.outcome == 'failure' && steps.check_stories.outputs.pending_count > 0
+        id: heal
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GHT }}
+        run: |
+          echo "Verification failed, attempting LLM heal..."
+          STORY_ID="${{ steps.check_stories.outputs.story_id }}"
+          STORY_TITLE="${{ steps.check_stories.outputs.story_title }}"
+          
+          # Create issue comment with heal request
+          ISSUE_BODY="🔧 Ralph Loop auto-heal request
+
+Story: $STORY_ID - $STORY_TITLE
+Status: Verification failed
+Branch: ${{ github.ref_name }}
+Commit: ${{ github.sha }}
+
+Verification step failed. Requesting LLM assistance to diagnose and fix.
+
+\`\`\`
+Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+\`\`\`"
+
+          # Create a comment on the PR if this is a PR branch
+          if [[ "${{ github.ref }}" == refs/heads/copilot/* ]]; then
+            echo "Creating heal request comment..."
+            echo "$ISSUE_BODY"
+          fi
+          
+          # For now, just log - actual LLM integration would go here
+          echo "heal_attempted=true" >> $GITHUB_OUTPUT
+
+      - name: Retry verification after heal
+        if: steps.heal.outputs.heal_attempted == 'true'
+        id: retry
+        continue-on-error: true
+        run: |
+          STORY_ID="${{ steps.check_stories.outputs.story_id }}"
+          VERIFY_CMD=$(jq -r ".stories[] | select(.id == \"$STORY_ID\") | .verification" scripts/ralph/prd.json)
+          
+          if [ "$VERIFY_CMD" != "null" ] && [ -n "$VERIFY_CMD" ]; then
+            echo "Retrying verification: $VERIFY_CMD"
+            eval $VERIFY_CMD
+          else
+            exit 0
+          fi
+
+      - name: Update PRD on success
+        if: (steps.verify.outcome == 'success' || steps.retry.outcome == 'success') && steps.check_stories.outputs.pending_count > 0
+        env:
+          GH_TOKEN: ${{ secrets.GHT }}
+        run: |
+          STORY_ID="${{ steps.check_stories.outputs.story_id }}"
+          
+          # Update story status to completed
+          jq --arg id "$STORY_ID" '
+            .stories = [.stories[] | 
+              if .id == $id then 
+                .status = "completed" 
+              else . 
+              end
+            ]
+          ' scripts/ralph/prd.json > scripts/ralph/prd.json.tmp
+          
+          mv scripts/ralph/prd.json.tmp scripts/ralph/prd.json
+          
+          # Append to progress log
+          echo "" >> scripts/ralph/progress.txt
+          echo "## Story $STORY_ID - $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> scripts/ralph/progress.txt
+          echo "Completed: ${{ steps.check_stories.outputs.story_title }}" >> scripts/ralph/progress.txt
+          
+          # Commit changes
+          git config user.name "ralph-loop[bot]"
+          git config user.email "ralph-loop[bot]@users.noreply.github.com"
+          git add scripts/ralph/prd.json scripts/ralph/progress.txt
+          git commit -m "chore: [$STORY_ID] mark completed - ${{ steps.check_stories.outputs.story_title }}" || echo "No changes to commit"
+          git push origin ${{ github.ref_name }} || echo "Push failed or no changes"
+
+      - name: Check if all stories complete
+        if: steps.check_stories.outputs.pending_count > 0
+        run: |
+          PENDING=$(jq '[.stories[] | select(.status == "pending")] | length' scripts/ralph/prd.json)
+          if [ "$PENDING" -eq 0 ]; then
+            echo "🎉 All stories completed! Ralph Loop finished."
+          else
+            echo "📝 $PENDING stories remaining"
+          fi
+
+      - name: Report failure
+        if: steps.verify.outcome == 'failure' && (steps.retry.outcome == 'failure' || steps.retry.outcome == '')
+        run: |
+          echo "❌ Verification failed and heal did not resolve issue"
+          exit 1
