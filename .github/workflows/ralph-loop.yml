@@ -82,25 +82,13 @@ jobs:
           STORY_ID="${{ steps.check_stories.outputs.story_id }}"
           STORY_TITLE="${{ steps.check_stories.outputs.story_title }}"
           
-          # Create issue comment with heal request
-          ISSUE_BODY="🔧 Ralph Loop auto-heal request
-
-Story: $STORY_ID - $STORY_TITLE
-Status: Verification failed
-Branch: ${{ github.ref_name }}
-Commit: ${{ github.sha }}
-
-Verification step failed. Requesting LLM assistance to diagnose and fix.
-
-\`\`\`
-Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-\`\`\`"
-
-          # Create a comment on the PR if this is a PR branch
-          if [[ "${{ github.ref }}" == refs/heads/copilot/* ]]; then
-            echo "Creating heal request comment..."
-            echo "$ISSUE_BODY"
-          fi
+          # Log heal request details
+          echo "🔧 Ralph Loop auto-heal request"
+          echo "Story: $STORY_ID - $STORY_TITLE"
+          echo "Status: Verification failed"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
           # For now, just log - actual LLM integration would go here
           echo "heal_attempted=true" >> $GITHUB_OUTPUT
