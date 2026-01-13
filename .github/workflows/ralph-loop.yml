@@ -61,11 +61,13 @@ jobs:
           echo "Executing verification for story $STORY_ID"
           
           # Get verification command from story
+          # NOTE: Using eval here is intentional but comes with security risks.
+          # PRD is trusted source (repo-controlled). Do not use with untrusted input.
           VERIFY_CMD=$(jq -r ".stories[] | select(.id == \"$STORY_ID\") | .verification" scripts/ralph/prd.json)
           
           if [ "$VERIFY_CMD" != "null" ] && [ -n "$VERIFY_CMD" ]; then
             echo "Running: $VERIFY_CMD"
-            eval $VERIFY_CMD
+            eval "$VERIFY_CMD"
           else
             echo "No verification command found, considering success"
             exit 0
@@ -99,11 +101,13 @@ jobs:
         continue-on-error: true
         run: |
           STORY_ID="${{ steps.check_stories.outputs.story_id }}"
+          # NOTE: Using eval here is intentional but comes with security risks.
+          # PRD is trusted source (repo-controlled). Do not use with untrusted input.
           VERIFY_CMD=$(jq -r ".stories[] | select(.id == \"$STORY_ID\") | .verification" scripts/ralph/prd.json)
           
           if [ "$VERIFY_CMD" != "null" ] && [ -n "$VERIFY_CMD" ]; then
             echo "Retrying verification: $VERIFY_CMD"
-            eval $VERIFY_CMD
+            eval "$VERIFY_CMD"
           else
             exit 0
           fi
@@ -127,16 +131,20 @@ jobs:
           
           mv scripts/ralph/prd.json.tmp scripts/ralph/prd.json
           
-          # Append to progress log
+          # Append to progress log (ensure file exists)
+          mkdir -p scripts/ralph
+          touch scripts/ralph/progress.txt
           echo "" >> scripts/ralph/progress.txt
           echo "## Story $STORY_ID - $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> scripts/ralph/progress.txt
           echo "Completed: ${{ steps.check_stories.outputs.story_title }}" >> scripts/ralph/progress.txt
           
-          # Commit changes
+          # Commit changes with safe quoting
           git config user.name "ralph-loop[bot]"
           git config user.email "ralph-loop[bot]@users.noreply.github.com"
           git add scripts/ralph/prd.json scripts/ralph/progress.txt
-          git commit -m "chore: [$STORY_ID] mark completed - ${{ steps.check_stories.outputs.story_title }}" || echo "No changes to commit"
+          # Use printf to safely handle special characters in story title
+          COMMIT_MSG=$(printf "chore: [%s] mark completed - %s" "$STORY_ID" "${{ steps.check_stories.outputs.story_title }}")
+          git commit -m "$COMMIT_MSG" || echo "No changes to commit"
           git push origin ${{ github.ref_name }} || echo "Push failed or no changes"
 
       - name: Check if all stories complete

@@ -72,3 +72,12 @@ git push
 - Auto-create PR with fix suggestions
 - Parse error logs and provide context to LLM
 - Implement retry limits and backoff
+
+## Security Notes
+
+**Command Execution**: The workflow uses `eval` to run verification commands from the PRD. This is intentional but poses security risks:
+- ✅ Safe: PRD is repo-controlled (trusted source)
+- ❌ Risk: Don't use with untrusted external input
+- 🔒 Mitigation: Commands come only from committed PRD file
+
+**Script Permissions**: Verification scripts (like `smoke-test.sh`) should have execute permissions set via `chmod +x`. The workflow explicitly calls them with `bash` to work even without +x.
